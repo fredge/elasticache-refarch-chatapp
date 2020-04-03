@@ -43,6 +43,8 @@ add_redis_subscriber('member_add');
 add_redis_subscriber('member_delete');
 
 io.on('connection', function(socket) {
+
+    // Resisから、接続している全てのメンバーを取得
     var get_members = redis.hgetall('members').then(function(redis_members) {
         var members = {};
         for (var key in redis_members) {
@@ -51,6 +53,9 @@ io.on('connection', function(socket) {
         return members;
     });
 
+    // メンバー(自分)を初期化
+    // Socketの接続IDでRedisに登録されているメンバーがいれば(=自分)それを使う
+    // まだRedisに登録されていない(初回接続)場合、メンバー(アバター)を初期化してRedisに登録(追加)
     var initialize_member = get_members.then(function(members) {
         if (members[socket.id]) {
             return members[socket.id];
@@ -68,6 +73,7 @@ io.on('connection', function(socket) {
         });
     });
 
+    // Redisから最近のメッセージを取得
     // get the highest ranking messages (most recent) up to channel_history_max size
     var get_messages = redis.zrange('messages', -1 * channel_history_max, -1).then(function(result) {
         return result.map(function(x) {
